@@ -9,67 +9,47 @@ import uploadRoutes from './routes/upload.js';
 import path from 'path';
 import morgan from 'morgan';
 
-
-//server Configs
-
 dotenv.config();
 ConnectMongo();
 
 const app = express();
 
-
-
-if(process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
-
+// Dev logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
 }
 
-
-
-//express.json() is used to accept json data 
+// Body parser
 app.use(express.json());
 
+// API routes
+app.use('/api/products', productRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/upload', uploadRoutes);
+app.get('/api/config/paypal', (req, res) =>
+  res.send(process.env.PAYPAL_CLIENT_ID)
+);
 
-app.get('/', async (req, res)=> {
-        
-    res.send("App Running");
+// __dirname points to backend/, so go up one level to access frontend
+const __dirname = path.resolve();
 
- });
- app.get('/api/config/paypal', (req, res)=> res.send(process.env.PAYPAL_CLIENT_ID) )
- app.use('/api/products', productRoutes);
- app.use('/api/users', userRoutes);
- app.use('/api/orders', orderRoutes );
- app.use('/api/upload', uploadRoutes);
+// Serve uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Serve React build
+app.use(express.static(path.join(__dirname, './frontend/build')));
 
+// Catch all other routes and serve React
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, './frontend/build', 'index.html'));
+});
 
- const __dirname = path.resolve();
- app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
- app.use(express.static(path.join(__dirname, '/frontend/build')));
- 
-
- app.get('*', (_, res) => {
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'));
-  });
-  
-
-
- app.use(notFound);
-
- app.use(errorHandler);
-
-
-
-
- 
-
+// Error middleware
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
-
-
-
-
-
-
-app.listen(PORT, console.log(`Server on ${process.env.NODE_ENV} on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
+);
